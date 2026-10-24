@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Tonight Together</title>
+    <link rel="stylesheet" href="popup.css" />
+    <style>body { width: auto; max-width: 520px; margin: 40px auto; }</style>
+  </head>
+  <body>
+    <main>
+      <span class="logo">TONIGHT</span>
+      <form id="form">
+        <label><span data-i18n="ext.serverUrl"></span><input id="ws" placeholder="ws://127.0.0.1:5173/ws" spellcheck="false" /></label>
+        <p class="muted">ws://127.0.0.1:5173/ws (Vite dev proxy) · ws://127.0.0.1:8787 (npm run server) · wss://your-host.example/ws</p>
+        <button class="primary" type="submit" data-i18n="together.save"></button>
+        <span class="ok" id="saved" hidden>✓</span>
+      </form>
+    </main>
+    <script src="shared/i18n.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>

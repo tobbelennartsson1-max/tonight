@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "Tonight Together",
+  "short_name": "Tonight",
+  "version": "0.1.0",
+  "description": "Chat, reactions and a synced 3-2-1 countdown on top of Netflix, HBO Max, Disney+, Prime Video and Viaplay — for Tonight watch-together rooms.",
+  "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
+  "action": {
+    "default_title": "Tonight Together",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png" }
+  },
+  "options_page": "options.html",
+  "background": { "service_worker": "background.js" },
+  "permissions": ["storage"],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.netflix.com/*",
+        "https://play.max.com/*",
+        "https://play.hbomax.com/*",
+        "https://www.hbomax.com/*",
+        "https://www.max.com/*",
+        "https://www.disneyplus.com/*",
+        "https://www.primevideo.com/*",
+        "https://www.amazon.com/*",
+        "https://www.amazon.se/*",
+        "https://www.amazon.co.uk/*",
+        "https://www.amazon.de/*",
+        "https://viaplay.se/*",
+        "https://viaplay.com/*",
+        "https://*.viaplay.se/*",
+        "https://*.viaplay.com/*"
+      ],
+      "js": ["shared/i18n.js", "shared/effects.js", "content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    },
+    {
+      "matches": ["http://127.0.0.1/*", "http://localhost/*", "https://*.github.io/*"],
+      "js": ["bridge.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

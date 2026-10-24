@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 12% 4%;
+    --foreground: 40 28% 94%;
+    --card: 240 10% 8%;
+    --card-foreground: 40 24% 94%;
+    --primary: 38 78% 56%;
+    --primary-foreground: 240 14% 8%;
+    --muted: 240 8% 13%;
+    --muted-foreground: 36 12% 68%;
+    --border: 36 12% 18%;
+    --radius: 0.75rem;
+    --cjk: 'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans JP', 'Noto Sans CJK JP';
+    --cjk-serif: 'Noto Serif CJK SC', 'Songti SC', 'SimSun', var(--cjk);
+  }
+
+  html[lang|='ja'] {
+    --cjk: 'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', 'Noto Sans CJK JP', 'Noto Sans SC';
+    --cjk-serif: 'Noto Serif CJK JP', 'Hiragino Mincho ProN', 'Yu Mincho', var(--cjk);
+  }
+
+  /* Display fonts have no CJK glyphs; tone down the wide Latin tracking. */
+  html[lang|='ja'] .font-poster,
+  html[lang|='zh'] .font-poster {
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-black text-foreground antialiased;
+    font-family: Outfit, var(--cjk), ui-sans-serif, system-ui, sans-serif;
+    min-height: 100vh;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.35);
+    color: hsl(var(--foreground));
+  }
+}
+
+@layer components {
+  .cinematic-wash {
+    background:
+      radial-gradient(circle at 20% 0%, hsl(38 60% 30% / 0.08), transparent 40%),
+      radial-gradient(circle at 80% 100%, hsl(20 40% 20% / 0.08), transparent 40%);
+  }
+
+  .poster-frame {
+    @apply overflow-hidden rounded-lg;
+    box-shadow:
+      0 25px 50px -20px rgba(0, 0, 0, 0.75),
+      0 0 0 1px hsl(var(--border) / 0.6);
+    transform: rotate(-1.25deg);
+  }
+
+  .rec-enter {
+    animation: rec-in 0.5s ease-out both;
+  }
+
+  .retailer-col {
+    flex: 1 1 0;
+    min-width: 0;
+    transition: flex-grow 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .retailer-col:last-child {
+    box-shadow: none;
+  }
+
+  .retailer-col:hover,
+  .retailer-col:focus-visible {
+    flex-grow: 2.2;
+  }
+
+  .retailer-vert {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+}
+
+@keyframes cd-pop {
+  from {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.cd-pop {
+  animation: cd-pop 0.35s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+@keyframes rec-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rec-enter {
+    animation: none;
+  }
+
+  .mood-chip,
+  .poster-frame,
+  button,
+  a {
+    transition: none !important;
+    transform: none !important;
+  }
+
+  .retailer-col,
+  .retailer-col:hover,
+  .retailer-col:focus-visible {
+    flex-grow: 1;
+    transition: none;
+  }
+}
