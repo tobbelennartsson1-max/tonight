@@ -92,6 +92,7 @@ export function useRoom({ code, create, profile, enabled, onEvent }) {
     let timer = null;
     let pingTimer = null;
     let createFlag = create;
+    let resume = false;
 
     const connect = () => {
       setStatus((s) => (s === 'open' ? 'connecting' : s === 'idle' ? 'connecting' : s));
@@ -106,7 +107,7 @@ export function useRoom({ code, create, profile, enabled, onEvent }) {
       ws.onopen = () => {
         retry = 0;
         const p = profileRef.current || {};
-        ws.send(JSON.stringify({ type: 'join', room: code, create: createFlag, memberId, name: p.name, services: p.services, client: 'web' }));
+        ws.send(JSON.stringify({ type: 'join', room: code, create: createFlag, resume, memberId, name: p.name, services: p.services, client: 'web' }));
         const ping = () => ws.readyState === 1 && ws.send(JSON.stringify({ type: 'ping', t0: Date.now() }));
         ping();
         pingTimer = setInterval(ping, 15000);
@@ -125,6 +126,7 @@ export function useRoom({ code, create, profile, enabled, onEvent }) {
         }
         if (msg.type === 'joined') {
           createFlag = false;
+          resume = true;
           setJoinedCode(msg.room);
           setStatus('open');
           return;

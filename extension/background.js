@@ -1,9 +1,9 @@
 // Tonight Together — service worker. Owns the WebSocket for each overlay tab and relays
 // messages over a runtime port, so streaming-site CSP / private-network rules don't apply.
-const DEFAULT_WS = 'ws://127.0.0.1:5173/ws';
+const DEFAULT_WS = 'wss://tonight-together.onrender.com/ws';
 
 async function settings() {
-  const s = await chrome.storage.local.get(['room', 'name', 'memberId', 'services', 'wsUrl']);
+  const s = await chrome.storage.local.get(['room', 'name', 'memberId', 'services', 'wsUrl', 'joinedRoom']);
   if (!s.memberId) {
     s.memberId = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
     await chrome.storage.local.set({ memberId: s.memberId });
@@ -43,7 +43,7 @@ function makeConn(port) {
     conn.ws = ws;
     ws.onopen = () => {
       conn.retry = 0;
-      ws.send(JSON.stringify({ type: 'join', room: s.room, memberId: s.memberId, name: s.name || 'Guest', services: s.services, client: 'ext', create: false }));
+      ws.send(JSON.stringify({ type: 'join', room: s.room, memberId: s.memberId, name: s.name || 'Guest', services: s.services, client: 'ext', create: false, resume: s.joinedRoom === s.room }));
       const ping = () => ws.readyState === 1 && ws.send(JSON.stringify({ type: 'ping', t0: Date.now() }));
       ping();
       conn.ping = setInterval(ping, 20000);
@@ -57,6 +57,7 @@ function makeConn(port) {
       }
       if (msg.type === 'joined') {
         conn.status = 'open';
+        if (s.joinedRoom !== msg.room) chrome.storage.local.set({ joinedRoom: msg.room });
         post({ type: 'ext-status', status: 'open', room: msg.room, memberId: msg.memberId });
       }
       if (msg.type === 'error' && msg.code === 'notFound') {

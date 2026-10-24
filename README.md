@@ -44,21 +44,22 @@ streaming app. Tonight handles everything around it:
 
 In dev, Vite proxies `/ws` → `ws://127.0.0.1:8787` (override with `WS_PROXY_TARGET`), so the web app
 uses the same origin. For a hosted build, set **`VITE_WS_URL`** at build time, e.g.
-`VITE_WS_URL=wss://tonight-together.onrender.com npm run build`.
+`VITE_WS_URL=wss://tonight-together.onrender.com/ws npm run build`.
 
-### Hosting the realtime part
+### Hosting (live)
 
-GitHub Pages only serves static files, so it **can't run the WebSocket server**. The static site can stay
-on Pages; the server needs a small Node host with WebSocket support, for example:
-
-- **Render** (free web service): start command `node server/index.mjs`, it provides `PORT`.
-  Free instances sleep when idle, so the first connection after a while takes ~30 s.
-- **Fly.io** (small shared VM): `fly launch` with a Node Dockerfile and `internal_port = 8787`.
-  Add a volume if `rooms.json` should survive deploys.
-- **Railway**: deploy the repo with start command `npm run server`.
-
-Then build the site with `VITE_WS_URL=wss://<host>` and put the same URL in the extension options.
-None of this is deployed yet.
+- **Site:** GitHub Pages, built by `.github/workflows/deploy.yml`, which passes the repo variable
+  `TONIGHT_WS_URL` in as `VITE_WS_URL`. If the variable is unset, `/together` shows a friendly
+  "coming soon" card instead of trying to connect.
+- **Realtime server:** Render web service `tonight-together` (free plan, Frankfurt), start command
+  `node server/index.mjs` (`npm run start:server`), auto-deploys from `main`.
+  - WebSocket: `wss://tonight-together.onrender.com/ws` · health check: `https://tonight-together.onrender.com/health`
+  - Allowed origins: `https://tobbelennartsson1-max.github.io`, localhost/127.0.0.1, browser extensions,
+    plus anything in the `ALLOWED_ORIGINS` env var (comma-separated).
+  - Free instances **sleep after ~15 min idle**; the first connection then takes up to about a minute
+    while it wakes (the app shows "connecting" and retries on its own).
+  - Rooms live **in memory**, so a restart or redeploy empties them. People already in a room
+    reconnect to the same code automatically (`resume`), but the queue and chat start over.
 
 ## Browser extension (Chrome / Edge, Manifest V3)
 
@@ -76,6 +77,6 @@ site's player (no auto play/pause). Typing in the overlay doesn't trigger player
    **Open overlay** (the room is handed to the extension).
 5. Open your streaming service. The overlay appears on top of the player.
 
-Server URL: extension options (default `ws://127.0.0.1:5173/ws`, the Vite dev proxy; `ws://127.0.0.1:8787`
-works too). The WebSocket lives in the service worker, so streaming sites' CSP doesn't block it.
+Server URL: extension options (default `wss://tonight-together.onrender.com/ws`; for local dev use
+`ws://127.0.0.1:5173/ws` (Vite proxy) or `ws://127.0.0.1:8787/ws`). The WebSocket lives in the service worker, so streaming sites' CSP doesn't block it.
 Extension strings come from the same `src/i18n` dictionaries (all 7 languages). Pick a language in the popup.

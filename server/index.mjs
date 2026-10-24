@@ -181,7 +181,10 @@ function handle(ws, msg) {
     let code = normCode(msg.room);
     let room = code ? rooms.get(code) : null;
     if (!room) {
-      if (!msg.create) {
+      // `resume`: the client was already in this room before a server restart (rooms live in
+      // memory, so a sleeping free instance forgets them) — quietly recreate it with the same code.
+      const resume = !!msg.resume && !!code && code.length >= 4;
+      if (!msg.create && !resume) {
         send(ws, { type: 'error', code: 'notFound', room: code });
         return;
       }
