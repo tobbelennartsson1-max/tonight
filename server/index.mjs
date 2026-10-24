@@ -1,5 +1,6 @@
 // Tonight Together — tiny realtime room server.
-// In-memory rooms, persisted to server/data/rooms.json. One WebSocket per tab/overlay.
+// In-memory rooms (best-effort persisted to server/data/rooms.json; set PERSIST=0 to disable).
+// One WebSocket per tab/overlay. Run with `npm run start:server`; listens on $PORT (default 8787).
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -17,6 +18,19 @@ const COUNTDOWN_LEAD_MS = 4500; // 1.5 s "get ready" + 3-2-1
 const ROOM_TTL_MS = 1000 * 60 * 60 * 24 * 14;
 const COLORS = ['#E8B04A', '#E8735A', '#7FB3E8', '#9AD18B', '#C79BE8', '#E89BC0', '#6FD3C7', '#F2D16B'];
 const EFFECTS = new Set(['confetti', 'hearts', 'popcorn']);
+const PERSIST = process.env.PERSIST !== '0';
+// Browsers always send Origin on WebSocket upgrades; only these may connect.
+const ALLOWED_ORIGINS = new Set(
+  ['https://tobbelennartsson1-max.github.io', ...(process.env.ALLOWED_ORIGINS || '').split(',')]
+    .map((o) => o.trim().replace(/\/$/, ''))
+    .filter(Boolean),
+);
+const LOCAL_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
+const EXTENSION_ORIGIN = /^(chrome-extension|moz-extension|safari-web-extension):\/\/[a-z0-9-]+$/i;
+function originAllowed(origin) {
+  if (!origin) return true; // non-browser clients (CLI tests, health probes)
+  return ALLOWED_ORIGINS.has(origin) || LOCAL_ORIGIN.test(origin) || EXTENSION_ORIGIN.test(origin);
+}
 
 /** @type {Map<string, any>} */
 const rooms = new Map();
@@ -27,6 +41,7 @@ const clip = (s, n) => String(s ?? '').trim().slice(0, n);
 const now = () => Date.now();
 
 function load() {
+  if (!PERSIST) return;
   try {
     const raw = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
     for (const r of raw.rooms || []) {
@@ -41,6 +56,7 @@ function load() {
 
 let saveTimer = null;
 function save() {
+  if (!PERSIST) return;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     try {
@@ -309,17 +325,28 @@ function handle(ws, msg) {
 
 load();
 
+const startedAt = now();
 const server = http.createServer((req, res) => {
-  if (req.url === '/health') {
-    res.writeHead(200, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({ ok: true, rooms: rooms.size }));
+  const pathname = (req.url || '/').split('?')[0];
+  if (pathname === '/health' || pathname === '/healthz') {
+    res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+    res.end(req.method === 'HEAD' ? undefined : JSON.stringify({ ok: true, rooms: rooms.size, clients: wss.clients.size, uptime: Math.round((now() - startedAt) / 1000) }));
     return;
   }
-  res.writeHead(404);
+  res.writeHead(pathname === '/' ? 200 : 404, { 'content-type': 'text/plain' });
   res.end('Tonight Together WebSocket server — connect to /ws');
 });
 
-const wss = new WebSocketServer({ server, maxPayload: 16 * 1024 });
+const wss = new WebSocketServer({
+  server,
+  path: '/ws',
+  maxPayload: 16 * 1024,
+  verifyClient: ({ origin }, done) => {
+    if (originAllowed(origin)) return done(true);
+    console.warn('[together] rejected origin', origin);
+    return done(false, 403, 'Origin not allowed');
+  },
+});
 
 wss.on('connection', (ws) => {
   ws.isAlive = true;
@@ -361,5 +388,23 @@ setInterval(() => {
 }, 30000);
 
 server.listen(PORT, HOST, () => {
-  console.log(`[together] listening on ws://${HOST}:${PORT}/ws`);
+  console.log(`[together] listening on ws://${HOST}:${PORT}/ws (persist=${PERSIST})`);
 });
+
+function shutdown(sig) {
+  console.log(`[together] ${sig}, closing`);
+  if (PERSIST) {
+    clearTimeout(saveTimer);
+    try {
+      fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
+      fs.writeFileSync(DATA_FILE, JSON.stringify({ rooms: [...rooms.values()] }));
+    } catch {
+      /* ignore */
+    }
+  }
+  for (const ws of wss.clients) ws.close(1012, 'server restarting');
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 3000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

@@ -9,7 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "server": "node server/index.mjs",
-    "extension:build": "node scripts/build-extension.mjs"
+    "extension:build": "node scripts/build-extension.mjs",
+    "start:server": "node server/index.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.33.0",
@@ -27,5 +28,8 @@
     "postcss": "^8.5.26",
     "tailwindcss": "^3.4.19",
     "vite": "^8.2.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
